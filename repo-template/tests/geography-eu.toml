@@ -1,0 +1,38 @@
+title = "European Capitals"
+timeout = 12
+
+[[questions]]
+id = "q1"
+question = "What is the capital of France?"
+correct = "Paris"
+answers = ["Berlin", "Paris", "Madrid", "Rome", "Lisbon", "Vienna"]
+
+[[questions]]
+id = "q2"
+question = "What is the capital of Germany?"
+correct = "Berlin"
+answers = ["Munich", "Bonn", "Berlin", "Vienna", "Prague", "Hamburg"]
+
+[[questions]]
+id = "q3"
+question = "What is the capital of Italy?"
+correct = "Rome"
+answers = ["Milan", "Naples", "Venice", "Rome", "Florence", "Turin"]
+
+[[questions]]
+id = "q4"
+question = "What is the capital of Sweden?"
+correct = "Stockholm"
+answers = ["Oslo", "Helsinki", "Copenhagen", "Stockholm", "Gothenburg", "Malmö"]
+
+[[questions]]
+id = "q5"
+question = "What is the capital of Poland?"
+correct = "Warsaw"
+answers = ["Krakow", "Warsaw", "Gdansk", "Poznan", "Wroclaw", "Lodz"]
+
+[[questions]]
+id = "q6"
+question = "What is the capital of Greece?"
+correct = "Athens"
+answers = ["Athens", "Thessaloniki", "Patras", "Rome", "Istanbul", "Nicosia"]

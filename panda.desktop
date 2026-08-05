@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Panda Quiz
+Comment=Terminal quiz game for kids
+Terminal=true
+Exec=/home/sirex/dev/panda/panda.py
+Icon=utilities-terminal
+Categories=Game;Education;
+Keywords=quiz;trivia;kids;education;
