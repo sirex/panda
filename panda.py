@@ -603,7 +603,7 @@ def _build_row_focus_map(focus_bg: str) -> dict[object, urwid.AttrSpec]:
 
     return {
         None: _fs("white,bold"),
-        "muted": _fs("dark gray"),
+        "muted": _fs("light gray"),
         "light green,bold": _fs("light green,bold"),
         "light red,bold": _fs("light red,bold"),
         "yellow,bold": _fs("yellow,bold"),
@@ -623,11 +623,11 @@ def _make_dark_theme() -> Theme:
             ("good", "light green,bold", "default"),
             ("bad", "light red,bold", "default"),
             ("warn", "yellow,bold", "default"),
-            ("muted", "dark gray", "default"),
+            ("muted", "light gray", "default"),
             ("key", "black", "light gray"),
             ("hi", "white,bold", "dark blue"),
             ("answer", "white,bold", "default"),
-            ("bar", "dark gray", "default"),
+            ("bar", "light gray", "default"),
             ("bar_dim", "dark gray", "default"),
             ("bar_warn", "yellow", "default"),
             ("bar_crit", "light red", "default"),
