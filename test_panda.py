@@ -773,3 +773,172 @@ def test_config_theme_load_unknown_falls_back(tmp_path, monkeypatch):
 def test_config_theme_resolve_unknown():
     t = panda._resolve_theme("nope")
     assert t.name == "dark"
+
+
+# --------------------------------------------------------------------------- #
+# Stylix theme
+# --------------------------------------------------------------------------- #
+
+_MOCK_BASE16 = {
+    "base00": "2e2e2e",
+    "base01": "3a3a3a",
+    "base02": "4a4a4a",
+    "base03": "5a5a5a",
+    "base04": "6a6a6a",
+    "base05": "cccccc",
+    "base06": "dddddd",
+    "base07": "eeeeee",
+    "base08": "ff4444",
+    "base09": "ff8844",
+    "base0A": "ffcc00",
+    "base0B": "44cc44",
+    "base0C": "44cccc",
+    "base0D": "4488ff",
+    "base0E": "cc44cc",
+    "base0F": "cc6644",
+}
+
+
+def _write_stylix_toml(path: Path, colors: dict[str, str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [f'{k} = "{v}"' for k, v in colors.items()]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _palette_by_name(theme: panda.Theme) -> dict[str, tuple[str, str, str]]:
+    return {entry[0]: entry for entry in theme.palette}
+
+
+@pytest.fixture
+def stylix_toml(tmp_path, monkeypatch):
+    """Write a valid Stylix TOML to tmp_path and point STYLIX_TOML_PATH at it."""
+    stylix_path = tmp_path / "stylix" / "panda.toml"
+    _write_stylix_toml(stylix_path, _MOCK_BASE16)
+    monkeypatch.setattr(panda, "STYLIX_TOML_PATH", stylix_path)
+    return stylix_path
+
+
+def test_stylix_theme_all_palette_entries(stylix_toml):
+    theme = panda._try_load_stylix_theme()
+    assert theme is not None
+    assert theme.name == "stylix"
+
+    pal = _palette_by_name(theme)
+
+    assert pal["title"][1:] == ("#4488ff,bold", "default")
+    assert pal["prompt"][1:] == ("#ffcc00,bold", "default")
+    assert pal["good"][1:] == ("#44cc44,bold", "default")
+    assert pal["bad"][1:] == ("#ff4444,bold", "default")
+    assert pal["warn"][1:] == ("#ffcc00,bold", "default")
+    assert pal["muted"][1:] == ("#5a5a5a", "default")
+    assert pal["key"][1:] == ("#3a3a3a", "#4a4a4a")
+    assert pal["hi"][1:] == ("#eeeeee,bold", "#4488ff")
+    assert pal["answer"][1:] == ("#eeeeee,bold", "default")
+    assert pal["bar"][1:] == ("#5a5a5a", "default")
+    assert pal["bar_dim"][1:] == ("#5a5a5a", "default")
+    assert pal["bar_warn"][1:] == ("#ffcc00", "default")
+    assert pal["bar_crit"][1:] == ("#ff4444", "default")
+    assert pal["select"][1:] == ("#2e2e2e", "#44cc44")
+    assert pal["focus"][1:] == ("#2e2e2e", "#44cccc")
+    assert pal["error"][1:] == ("#ff4444,bold", "default")
+
+
+def test_stylix_theme_focus_bg(stylix_toml):
+    theme = panda._try_load_stylix_theme()
+    assert theme is not None
+    assert theme.focus_bg == "#4488ff"
+
+
+def test_stylix_theme_row_focus_map(stylix_toml):
+    theme = panda._try_load_stylix_theme()
+    assert theme is not None
+    rfm = theme.row_focus_map
+    assert rfm is not None
+    assert None in rfm
+    assert "muted" in rfm
+    assert "light green,bold" in rfm
+    assert "light red,bold" in rfm
+    assert "yellow,bold" in rfm
+
+
+def test_stylix_theme_file_missing(tmp_path, monkeypatch):
+    nonexistent = tmp_path / "stylix" / "panda.toml"
+    monkeypatch.setattr(panda, "STYLIX_TOML_PATH", nonexistent)
+    assert panda._try_load_stylix_theme() is None
+
+
+def test_stylix_theme_file_malformed(tmp_path, monkeypatch):
+    stylix_path = tmp_path / "stylix" / "panda.toml"
+    stylix_path.parent.mkdir(parents=True)
+    stylix_path.write_text("not valid toml [[[", encoding="utf-8")
+    monkeypatch.setattr(panda, "STYLIX_TOML_PATH", stylix_path)
+    assert panda._try_load_stylix_theme() is None
+
+
+def test_stylix_theme_missing_keys(tmp_path, monkeypatch):
+    stylix_path = tmp_path / "stylix" / "panda.toml"
+    incomplete = dict(_MOCK_BASE16)
+    del incomplete["base0F"]
+    _write_stylix_toml(stylix_path, incomplete)
+    monkeypatch.setattr(panda, "STYLIX_TOML_PATH", stylix_path)
+    assert panda._try_load_stylix_theme() is None
+
+
+def test_stylix_theme_bad_hex(tmp_path, monkeypatch):
+    stylix_path = tmp_path / "stylix" / "panda.toml"
+    bad = dict(_MOCK_BASE16)
+    bad["base08"] = "xyz123"
+    _write_stylix_toml(stylix_path, bad)
+    monkeypatch.setattr(panda, "STYLIX_TOML_PATH", stylix_path)
+    assert panda._try_load_stylix_theme() is None
+
+
+def test_stylix_theme_wrong_length_hex(tmp_path, monkeypatch):
+    stylix_path = tmp_path / "stylix" / "panda.toml"
+    bad = dict(_MOCK_BASE16)
+    bad["base08"] = "ff44"
+    _write_stylix_toml(stylix_path, bad)
+    monkeypatch.setattr(panda, "STYLIX_TOML_PATH", stylix_path)
+    assert panda._try_load_stylix_theme() is None
+
+
+def test_stylix_auto_promote_in_config(tmp_path, monkeypatch):
+    """When stylix is available and config has no theme key, auto-promote."""
+    _stylix = panda.Theme(name="stylix", palette=[], focus_bg="#000", row_focus_map={})
+    panda.BUILTIN_THEMES["stylix"] = _stylix
+    try:
+        cfg_dir = tmp_path / "cfg_dir"
+        monkeypatch.setattr(panda, "CONFIG_DIR", cfg_dir)
+        monkeypatch.setattr(panda, "CONFIG_PATH", cfg_dir / "config.toml")
+
+        cfg = panda.load_config()
+        assert cfg.theme == "stylix"
+    finally:
+        panda.BUILTIN_THEMES.pop("stylix", None)
+
+
+def test_stylix_dark_stays_when_stylix_unavailable(tmp_path, monkeypatch):
+    """Without stylix registered, default theme stays 'dark'."""
+    cfg_dir = tmp_path / "cfg_dir"
+    monkeypatch.setattr(panda, "CONFIG_DIR", cfg_dir)
+    monkeypatch.setattr(panda, "CONFIG_PATH", cfg_dir / "config.toml")
+
+    cfg = panda.load_config()
+    assert cfg.theme == "dark"
+
+
+def test_stylix_explicit_stylix_in_config(tmp_path, monkeypatch):
+    """When config explicitly says theme='stylix' and it's available."""
+    _stylix = panda.Theme(name="stylix", palette=[], focus_bg="#000", row_focus_map={})
+    panda.BUILTIN_THEMES["stylix"] = _stylix
+    try:
+        cfg_dir = tmp_path / "cfg_dir"
+        cfg_dir.mkdir(parents=True, exist_ok=True)
+        (cfg_dir / "config.toml").write_text('theme = "stylix"\n', encoding="utf-8")
+        monkeypatch.setattr(panda, "CONFIG_DIR", cfg_dir)
+        monkeypatch.setattr(panda, "CONFIG_PATH", cfg_dir / "config.toml")
+
+        cfg = panda.load_config()
+        assert cfg.theme == "stylix"
+    finally:
+        panda.BUILTIN_THEMES.pop("stylix", None)

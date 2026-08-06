@@ -221,6 +221,8 @@ def load_config() -> Config:
             cfg.tests_dir = Path(os.path.expanduser(td))
         theme_name = _as_str(data.get("theme"), "dark")
         cfg.theme = theme_name if theme_name in BUILTIN_THEMES else "dark"
+    if cfg.theme == "dark" and "stylix" in BUILTIN_THEMES:
+        cfg.theme = "stylix"
     return cfg
 
 
@@ -642,6 +644,102 @@ BUILTIN_THEMES: dict[str, Theme] = {"dark": _make_dark_theme()}
 
 def _resolve_theme(name: str) -> Theme:
     return BUILTIN_THEMES.get(name, BUILTIN_THEMES[DEFAULT_THEME])
+
+
+STYLIX_TOML_PATH = (
+    Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "stylix" / "panda.toml"
+)
+
+
+def _try_load_stylix_theme() -> Theme | None:
+    if not STYLIX_TOML_PATH.exists():
+        return None
+    try:
+        with open(STYLIX_TOML_PATH, "rb") as f:
+            data = tomllib.load(f)
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+
+    _base16_keys = [
+        "base00",
+        "base01",
+        "base02",
+        "base03",
+        "base04",
+        "base05",
+        "base06",
+        "base07",
+        "base08",
+        "base09",
+        "base0A",
+        "base0B",
+        "base0C",
+        "base0D",
+        "base0E",
+        "base0F",
+    ]
+
+    colors: dict[str, str] = {}
+    for key in _base16_keys:
+        v = data.get(key)
+        if not isinstance(v, str) or len(v) != 6:
+            return None
+        try:
+            int(v, 16)
+        except ValueError:
+            return None
+        colors[key] = v
+
+    def _hexfg(ckey: str, *, bold: bool = False) -> str:
+        h = colors[ckey]
+        return f"#{h},bold" if bold else f"#{h}"
+
+    def _hexbg(ckey: str) -> str:
+        return f"#{colors[ckey]}"
+
+    focus_bg = _hexbg("base0D")
+
+    palette: list[tuple[str, str, str]] = [
+        ("title", _hexfg("base0D", bold=True), "default"),
+        ("prompt", _hexfg("base0A", bold=True), "default"),
+        ("good", _hexfg("base0B", bold=True), "default"),
+        ("bad", _hexfg("base08", bold=True), "default"),
+        ("warn", _hexfg("base0A", bold=True), "default"),
+        ("muted", _hexfg("base03"), "default"),
+        ("key", _hexfg("base01"), _hexbg("base02")),
+        ("hi", _hexfg("base07", bold=True), _hexbg("base0D")),
+        ("answer", _hexfg("base07", bold=True), "default"),
+        ("bar", _hexfg("base03"), "default"),
+        ("bar_dim", _hexfg("base03"), "default"),
+        ("bar_warn", _hexfg("base0A"), "default"),
+        ("bar_crit", _hexfg("base08"), "default"),
+        ("select", _hexfg("base00"), _hexbg("base0B")),
+        ("focus", _hexfg("base00"), _hexbg("base0C")),
+        ("error", _hexfg("base08", bold=True), "default"),
+    ]
+
+    def _fs(fg: str) -> urwid.AttrSpec:
+        return urwid.AttrSpec(fg, focus_bg)
+
+    row_focus_map: dict[object, urwid.AttrSpec] = {
+        None: _fs(_hexfg("base07", bold=True)),
+        "muted": _fs(_hexfg("base03")),
+        "light green,bold": _fs(_hexfg("base0B", bold=True)),
+        "light red,bold": _fs(_hexfg("base08", bold=True)),
+        "yellow,bold": _fs(_hexfg("base0A", bold=True)),
+    }
+
+    return Theme(
+        name="stylix",
+        palette=palette,
+        focus_bg=focus_bg,
+        row_focus_map=row_focus_map,
+    )
+
+
+_stylix_theme = _try_load_stylix_theme()
+if _stylix_theme is not None:
+    BUILTIN_THEMES["stylix"] = _stylix_theme
 
 
 FOCUS_BG = BUILTIN_THEMES["dark"].focus_bg
