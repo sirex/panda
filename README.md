@@ -111,7 +111,7 @@ On first run, Panda asks for a git repo URL (SSH recommended, e.g.
 You can also pre-seed the config:
 
 ```sh
-./panda.py init-repo git@github.com:you/panda-repo.git
+./panda.py --init git@github.com:you/panda-repo.git
 ```
 
 ### Pre-flight safety check
@@ -360,7 +360,7 @@ git push -u origin main
 Then point the game at it:
 
 ```sh
-./panda.py ~/.local/share/panda/repo git@github.com:you/panda-repo.git
+./panda.py --init git@github.com:you/panda-repo.git
 ```
 
 ## Layout

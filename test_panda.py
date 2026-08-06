@@ -26,6 +26,7 @@ SPEC.loader.exec_module(panda)
 # Fixtures
 # --------------------------------------------------------------------------- #
 
+
 @pytest.fixture
 def rng():
     return random.Random(0)
@@ -56,8 +57,12 @@ def make_config(repo_path: Path, player: str = "tester") -> panda.Config:
 # parse_test / validation
 # --------------------------------------------------------------------------- #
 
+
 def test_parse_test_valid(tmp_repo):
-    p = write_test_file(tmp_repo, "math-easy", """
+    p = write_test_file(
+        tmp_repo,
+        "math-easy",
+        """
         title = "Math — Easy"
         timeout = 10
 
@@ -72,20 +77,24 @@ def test_parse_test_valid(tmp_repo):
         question = "What is 15 + 9?"
         correct = "24"
         timeout = 5
-    """)
+    """,
+    )
     t = panda.parse_test(p)
     assert t.slug == "math-easy"
     assert t.title == "Math — Easy"
     assert t.timeout == 10
     assert len(t.questions) == 2
     assert t.questions[0].id == "q1"
-    assert t.questions[0].answers == ["54","56","64","48","63","42"]
+    assert t.questions[0].answers == ["54", "56", "64", "48", "63", "42"]
     assert t.questions[1].answers is None
     assert t.questions[1].timeout == 5
 
 
 def test_parse_test_missing_answers(tmp_repo, rng):
-    p = write_test_file(tmp_repo, "x", """
+    p = write_test_file(
+        tmp_repo,
+        "x",
+        """
         title = "X"
         timeout = 10
         [[questions]]
@@ -96,7 +105,8 @@ def test_parse_test_missing_answers(tmp_repo, rng):
         id = "q2"
         question = "Q2"
         correct = "B"
-    """)
+    """,
+    )
     t = panda.parse_test(p)
     pool = panda.collect_answer_pool(t)
     assert "A" in pool and "B" in pool
@@ -107,7 +117,10 @@ def test_parse_test_missing_answers(tmp_repo, rng):
 
 
 def test_parse_rejects_duplicate_answers(tmp_repo):
-    p = write_test_file(tmp_repo, "bad", """
+    p = write_test_file(
+        tmp_repo,
+        "bad",
+        """
         title = "Bad"
         timeout = 10
         [[questions]]
@@ -115,13 +128,17 @@ def test_parse_rejects_duplicate_answers(tmp_repo):
         question = "Q"
         correct = "A"
         answers = ["A","A","A","A","A","A"]
-    """)
+    """,
+    )
     with pytest.raises(ValueError, match="duplicate answers"):
         panda.parse_test(p)
 
 
 def test_parse_rejects_correct_not_in_answers(tmp_repo):
-    p = write_test_file(tmp_repo, "bad", """
+    p = write_test_file(
+        tmp_repo,
+        "bad",
+        """
         title = "Bad"
         timeout = 10
         [[questions]]
@@ -129,13 +146,17 @@ def test_parse_rejects_correct_not_in_answers(tmp_repo):
         question = "Q"
         correct = "Z"
         answers = ["A","B","C","D","E","F"]
-    """)
+    """,
+    )
     with pytest.raises(ValueError, match="'correct' not in answers"):
         panda.parse_test(p)
 
 
 def test_parse_rejects_wrong_answer_count(tmp_repo):
-    p = write_test_file(tmp_repo, "bad", """
+    p = write_test_file(
+        tmp_repo,
+        "bad",
+        """
         title = "Bad"
         timeout = 10
         [[questions]]
@@ -143,13 +164,17 @@ def test_parse_rejects_wrong_answer_count(tmp_repo):
         question = "Q"
         correct = "A"
         answers = ["A","B","C"]
-    """)
+    """,
+    )
     with pytest.raises(ValueError, match="must have 6 answers"):
         panda.parse_test(p)
 
 
 def test_parse_rejects_duplicate_ids(tmp_repo):
-    p = write_test_file(tmp_repo, "bad", """
+    p = write_test_file(
+        tmp_repo,
+        "bad",
+        """
         title = "Bad"
         timeout = 10
         [[questions]]
@@ -160,16 +185,21 @@ def test_parse_rejects_duplicate_ids(tmp_repo):
         id = "dup"
         question = "Q2"
         correct = "B"
-    """)
+    """,
+    )
     with pytest.raises(ValueError, match="duplicate question id"):
         panda.parse_test(p)
 
 
 def test_parse_rejects_no_questions(tmp_repo):
-    p = write_test_file(tmp_repo, "empty", """
+    p = write_test_file(
+        tmp_repo,
+        "empty",
+        """
         title = "Empty"
         timeout = 10
-    """)
+    """,
+    )
     with pytest.raises(ValueError, match="no questions"):
         panda.parse_test(p)
 
@@ -178,29 +208,39 @@ def test_parse_rejects_no_questions(tmp_repo):
 # Integrity / sha256
 # --------------------------------------------------------------------------- #
 
+
 def test_missing_sidecar_refused(tmp_repo):
-    p = write_test_file(tmp_repo, "x", """
+    p = write_test_file(
+        tmp_repo,
+        "x",
+        """
         title = "X"
         timeout = 10
         [[questions]]
         id = "q1"
         question = "Q"
         correct = "A"
-    """, with_sidecar=False)
+    """,
+        with_sidecar=False,
+    )
     assert panda.verify_sha256_sidecar(p) is False
     with pytest.raises(panda.IntegrityError):
         panda.load_test_safely(p)
 
 
 def test_tampered_toml_refused(tmp_repo):
-    p = write_test_file(tmp_repo, "x", """
+    p = write_test_file(
+        tmp_repo,
+        "x",
+        """
         title = "X"
         timeout = 10
         [[questions]]
         id = "q1"
         question = "Q"
         correct = "A"
-    """)
+    """,
+    )
     # Mutate after sidecar was written.
     p.write_text(p.read_text().replace('"A"', '"B"'), encoding="utf-8")
     # Sidecar still matches the original; file no longer matches.
@@ -210,20 +250,25 @@ def test_tampered_toml_refused(tmp_repo):
 
 
 def test_write_sidecar_roundtrips(tmp_repo):
-    p = write_test_file(tmp_repo, "x", """
+    p = write_test_file(
+        tmp_repo,
+        "x",
+        """
         title = "X"
         timeout = 10
         [[questions]]
         id = "q1"
         question = "Q"
         correct = "A"
-    """)
+    """,
+    )
     assert panda.verify_sha256_sidecar(p) is True
 
 
 # --------------------------------------------------------------------------- #
 # Question ordering
 # --------------------------------------------------------------------------- #
+
 
 def test_order_questions_most_failed_first():
     qs = [
@@ -254,6 +299,7 @@ def test_order_questions_tiebreak_is_random():
 # sample_six_answers
 # --------------------------------------------------------------------------- #
 
+
 def test_sample_six_answers_includes_correct_and_distinct(rng):
     pool = ["A", "B", "C", "D", "E", "F"]
     q = panda.Question(id="q", question="?", correct="A")
@@ -275,24 +321,35 @@ def test_sample_six_answers_explicit_passthrough(rng):
 # Result log round-trip
 # --------------------------------------------------------------------------- #
 
+
 def test_write_and_read_result_log(tmp_repo):
     cfg = make_config(tmp_repo, "alex")
-    p = write_test_file(tmp_repo, "math-easy", """
+    p = write_test_file(
+        tmp_repo,
+        "math-easy",
+        """
         title = "Math"
         timeout = 10
         [[questions]]
         id = "q1"
         question = "Q"
         correct = "A"
-    """)
+    """,
+    )
     t = panda.parse_test(p)
     wrongs = [
         {"question": "q1", "answer": "B", "took": 8.5, "reason": "wrong"},
         {"question": "q2", "answer": "", "took": 10.0, "reason": "time"},
     ]
     out = panda.write_result_log(
-        cfg, t, started_at="2026-08-05T13:00:00Z", duration=120.0,
-        correct=1, wrong=1, timed_out=1, commit_id="abc123",
+        cfg,
+        t,
+        started_at="2026-08-05T13:00:00Z",
+        duration=120.0,
+        correct=1,
+        wrong=1,
+        timed_out=1,
+        commit_id="abc123",
         wrongs=wrongs,
     )
     assert out.exists()
@@ -318,47 +375,88 @@ def test_write_and_read_result_log(tmp_repo):
 # Stats scanning
 # --------------------------------------------------------------------------- #
 
+
 def test_attempts_last_and_best_score(tmp_repo):
     cfg = make_config(tmp_repo, "alex")
-    p = write_test_file(tmp_repo, "math-easy", """
+    p = write_test_file(
+        tmp_repo,
+        "math-easy",
+        """
         title = "Math"
         timeout = 10
         [[questions]]
         id = "q1"
         question = "Q"
         correct = "A"
-    """)
+    """,
+    )
     t = panda.parse_test(p)
-    panda.write_result_log(cfg, t, started_at="2026-08-01T10:00:00Z",
-                           duration=60.0, correct=3, wrong=2, timed_out=1,
-                           commit_id="x", wrongs=[])
-    panda.write_result_log(cfg, t, started_at="2026-08-05T10:00:00Z",
-                           duration=80.0, correct=5, wrong=0, timed_out=0,
-                           commit_id="y", wrongs=[])
+    panda.write_result_log(
+        cfg,
+        t,
+        started_at="2026-08-01T10:00:00Z",
+        duration=60.0,
+        correct=3,
+        wrong=2,
+        timed_out=1,
+        commit_id="x",
+        wrongs=[],
+    )
+    panda.write_result_log(
+        cfg,
+        t,
+        started_at="2026-08-05T10:00:00Z",
+        duration=80.0,
+        correct=5,
+        wrong=0,
+        timed_out=0,
+        commit_id="y",
+        wrongs=[],
+    )
     attempts, last, best = panda.attempts_and_last_score(cfg, "math-easy")
     assert attempts == 2
-    assert last == (5, 0, 0, 1)    # most recent: correct=5,wrong=0,timed=0,total=1
-    assert best == (5, 0, 0, 1)     # best correct is also 5 (>= 3)
+    assert last == (5, 0, 0, 1)  # most recent: correct=5,wrong=0,timed=0,total=1
+    assert best == (5, 0, 0, 1)  # best correct is also 5 (>= 3)
 
 
 def test_attempts_last_and_best_score_low_last(tmp_repo):
     # Best is a prior session, last is worse.
     cfg = make_config(tmp_repo, "alex")
-    p = write_test_file(tmp_repo, "math-easy", """
+    p = write_test_file(
+        tmp_repo,
+        "math-easy",
+        """
         title = "Math"
         timeout = 10
         [[questions]]
         id = "q1"
         question = "Q"
         correct = "A"
-    """)
+    """,
+    )
     t = panda.parse_test(p)
-    panda.write_result_log(cfg, t, started_at="2026-08-01T10:00:00Z",
-                           duration=60.0, correct=8, wrong=0, timed_out=0,
-                           commit_id="x", wrongs=[])
-    panda.write_result_log(cfg, t, started_at="2026-08-05T10:00:00Z",
-                           duration=80.0, correct=2, wrong=5, timed_out=1,
-                           commit_id="y", wrongs=[])
+    panda.write_result_log(
+        cfg,
+        t,
+        started_at="2026-08-01T10:00:00Z",
+        duration=60.0,
+        correct=8,
+        wrong=0,
+        timed_out=0,
+        commit_id="x",
+        wrongs=[],
+    )
+    panda.write_result_log(
+        cfg,
+        t,
+        started_at="2026-08-05T10:00:00Z",
+        duration=80.0,
+        correct=2,
+        wrong=5,
+        timed_out=1,
+        commit_id="y",
+        wrongs=[],
+    )
     attempts, last, best = panda.attempts_and_last_score(cfg, "math-easy")
     assert attempts == 2
     assert last == (2, 5, 1, 1)
@@ -369,16 +467,22 @@ def test_score_markup_colors(tmp_repo):
     markup = panda.score_markup((3, 2, 1, 6))
     # foreground-only colour specs, plain " / " separators
     assert markup == [
-        ("light green,bold", "3"), " / ",
-        ("light red,bold", "2"),   " / ",
-        ("yellow,bold", "1"),      " / ",
+        ("light green,bold", "3"),
+        " / ",
+        ("light red,bold", "2"),
+        " / ",
+        ("yellow,bold", "1"),
+        " / ",
         (None, "6"),
     ]
 
 
 def test_wrong_counts_by_question(tmp_repo):
     cfg = make_config(tmp_repo, "alex")
-    p = write_test_file(tmp_repo, "math-easy", """
+    p = write_test_file(
+        tmp_repo,
+        "math-easy",
+        """
         title = "Math"
         timeout = 10
         [[questions]]
@@ -389,52 +493,91 @@ def test_wrong_counts_by_question(tmp_repo):
         id = "q2"
         question = "Q"
         correct = "B"
-    """)
+    """,
+    )
     t = panda.parse_test(p)
-    panda.write_result_log(cfg, t, started_at="2026-08-01T10:00:00Z",
-                           duration=60.0, correct=0, wrong=2, timed_out=0,
-                           commit_id="x",
-                           wrongs=[{"question": "q1", "answer": "B", "took": 5.0,
-                                    "reason": "wrong"},
-                                   {"question": "q1", "answer": "C", "took": 5.0,
-                                    "reason": "wrong"}])
-    panda.write_result_log(cfg, t, started_at="2026-08-05T10:00:00Z",
-                           duration=60.0, correct=1, wrong=1, timed_out=0,
-                           commit_id="y",
-                           wrongs=[{"question": "q1", "answer": "B", "took": 5.0,
-                                    "reason": "wrong"},
-                                   {"question": "q2", "answer": "C", "took": 5.0,
-                                    "reason": "wrong"}])
+    panda.write_result_log(
+        cfg,
+        t,
+        started_at="2026-08-01T10:00:00Z",
+        duration=60.0,
+        correct=0,
+        wrong=2,
+        timed_out=0,
+        commit_id="x",
+        wrongs=[
+            {"question": "q1", "answer": "B", "took": 5.0, "reason": "wrong"},
+            {"question": "q1", "answer": "C", "took": 5.0, "reason": "wrong"},
+        ],
+    )
+    panda.write_result_log(
+        cfg,
+        t,
+        started_at="2026-08-05T10:00:00Z",
+        duration=60.0,
+        correct=1,
+        wrong=1,
+        timed_out=0,
+        commit_id="y",
+        wrongs=[
+            {"question": "q1", "answer": "B", "took": 5.0, "reason": "wrong"},
+            {"question": "q2", "answer": "C", "took": 5.0, "reason": "wrong"},
+        ],
+    )
     counts = panda.wrong_counts_by_question(cfg, "math-easy")
     assert counts == {"q1": 3, "q2": 1}
 
 
 def test_recent_tests(tmp_repo):
     cfg = make_config(tmp_repo, "alex")
-    pa = write_test_file(tmp_repo, "math-easy", """
+    pa = write_test_file(
+        tmp_repo,
+        "math-easy",
+        """
         title = "Math"
         timeout = 10
         [[questions]]
         id = "q1"
         question = "Q"
         correct = "A"
-    """)
-    pb = write_test_file(tmp_repo, "geo-eu", """
+    """,
+    )
+    pb = write_test_file(
+        tmp_repo,
+        "geo-eu",
+        """
         title = "Geo"
         timeout = 10
         [[questions]]
         id = "q1"
         question = "Q"
         correct = "A"
-    """)
+    """,
+    )
     ta = panda.parse_test(pa)
     tb = panda.parse_test(pb)
-    panda.write_result_log(cfg, tb, started_at="2026-08-01T10:00:00Z",
-                           duration=60.0, correct=1, wrong=0, timed_out=0,
-                           commit_id="x", wrongs=[])
-    panda.write_result_log(cfg, ta, started_at="2026-08-05T10:00:00Z",
-                           duration=60.0, correct=1, wrong=0, timed_out=0,
-                           commit_id="y", wrongs=[])
+    panda.write_result_log(
+        cfg,
+        tb,
+        started_at="2026-08-01T10:00:00Z",
+        duration=60.0,
+        correct=1,
+        wrong=0,
+        timed_out=0,
+        commit_id="x",
+        wrongs=[],
+    )
+    panda.write_result_log(
+        cfg,
+        ta,
+        started_at="2026-08-05T10:00:00Z",
+        duration=60.0,
+        correct=1,
+        wrong=0,
+        timed_out=0,
+        commit_id="y",
+        wrongs=[],
+    )
     recent = panda.recent_tests(cfg, topn=5)
     # newest first → math-easy (later started_at) before geo-eu
     assert recent == ["math-easy", "geo-eu"]
@@ -444,11 +587,22 @@ def test_recent_tests(tmp_repo):
 # Key handling
 # --------------------------------------------------------------------------- #
 
-@pytest.mark.parametrize("inp,exp", [
-    ("s", "s"), ("S", "s"), ("D", "d"), ("j", "j"), ("L", "l"),
-    ("a", None), ("enter", None), ("esc", None), ("q", None),
-    ("ctrl c", None),
-])
+
+@pytest.mark.parametrize(
+    "inp,exp",
+    [
+        ("s", "s"),
+        ("S", "s"),
+        ("D", "d"),
+        ("j", "j"),
+        ("L", "l"),
+        ("a", None),
+        ("enter", None),
+        ("esc", None),
+        ("q", None),
+        ("ctrl c", None),
+    ],
+)
 def test_normalize_key(inp, exp):
     assert panda.normalize_key(inp) == exp
 
@@ -462,14 +616,14 @@ def test_answer_keys_six():
 # render_bar
 # --------------------------------------------------------------------------- #
 
+
 def test_render_bar_extremes():
     full = panda.render_bar(1.0, width=10)
     assert full == [("bar", panda.BAR_FULL * 10)]
     empty = panda.render_bar(0.0, width=10)
     assert empty == [("bar_dim", panda.BAR_EMPTY * 10)]
     half = panda.render_bar(0.5, width=10)
-    assert half == [("bar", panda.BAR_FULL * 5),
-                    ("bar_dim", panda.BAR_EMPTY * 5)]
+    assert half == [("bar", panda.BAR_FULL * 5), ("bar_dim", panda.BAR_EMPTY * 5)]
 
 
 def test_render_bar_clamps():
@@ -480,6 +634,7 @@ def test_render_bar_clamps():
 # --------------------------------------------------------------------------- #
 # slugify / toml escape
 # --------------------------------------------------------------------------- #
+
 
 def test_slugify_basic():
     assert panda.slugify("Math — Easy!") == "math-easy"
@@ -502,14 +657,12 @@ def test_toml_value_types():
 # git_state_is_clean (real git in tmp dir)
 # --------------------------------------------------------------------------- #
 
+
 def _git_init(repo: Path):
     repo.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["git", "init", "-b", "main", str(repo)], check=True,
-                   capture_output=True)
-    subprocess.run(["git", "-C", str(repo), "config", "user.email",
-                    "p@local"], check=True)
-    subprocess.run(["git", "-C", str(repo), "config", "user.name", "P"],
-                   check=True)
+    subprocess.run(["git", "init", "-b", "main", str(repo)], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.email", "p@local"], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.name", "P"], check=True)
 
 
 def test_git_clean_check_on_clean_main(tmp_path):
@@ -517,8 +670,9 @@ def test_git_clean_check_on_clean_main(tmp_path):
     _git_init(repo)
     (repo / "f.txt").write_text("x")
     subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
-    subprocess.run(["git", "-C", str(repo), "commit", "-m", "init"],
-                   check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "-m", "init"], check=True, capture_output=True
+    )
     ok, msg = panda.git_state_is_clean(repo)
     assert ok, msg
 
@@ -528,8 +682,9 @@ def test_git_clean_check_dirty_worktree(tmp_path):
     _git_init(repo)
     (repo / "f.txt").write_text("x")
     subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
-    subprocess.run(["git", "-C", str(repo), "commit", "-m", "init"],
-                   check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "-m", "init"], check=True, capture_output=True
+    )
     (repo / "f.txt").write_text("y")  # dirty
     ok, _msg = panda.git_state_is_clean(repo)
     assert not ok
@@ -540,11 +695,11 @@ def test_git_clean_check_wrong_branch(tmp_path):
     _git_init(repo)
     (repo / "f.txt").write_text("x")
     subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
-    subprocess.run(["git", "-C", str(repo), "commit", "-m", "init"],
-                   check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "-m", "init"], check=True, capture_output=True
+    )
     subprocess.run(["git", "-C", str(repo), "branch", "feat"], check=True)
-    subprocess.run(["git", "-C", str(repo), "checkout", "feat"], check=True,
-                   capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "checkout", "feat"], check=True, capture_output=True)
     ok, _msg = panda.git_state_is_clean(repo)
     assert not ok
 
@@ -554,8 +709,9 @@ def test_get_commit_id(tmp_path):
     _git_init(repo)
     (repo / "f.txt").write_text("x")
     subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
-    subprocess.run(["git", "-C", str(repo), "commit", "-m", "init"],
-                   check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "-m", "init"], check=True, capture_output=True
+    )
     cid = panda.get_commit_id(repo)
     assert len(cid) == 40 and all(c in "0123456789abcdef" for c in cid)
 
@@ -566,15 +722,18 @@ def test_commit_and_push_results_commits_locally(tmp_path):
     (repo / "README.md").write_text("seed\n", encoding="utf-8")
     (repo / "results").mkdir()
     subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
-    subprocess.run(["git", "-C", str(repo), "commit", "-m", "init"],
-                   check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "-m", "init"], check=True, capture_output=True
+    )
     # add a result file
     (repo / "results" / "alex").mkdir(parents=True)
     (repo / "results" / "alex" / "x.toml").write_text(
-        'test = "x"\nplayer = "alex"\n', encoding="utf-8")
+        'test = "x"\nplayer = "alex"\n', encoding="utf-8"
+    )
     ok, msg = panda.commit_and_push_results(repo, "alex")
     # push will fail (no remote); we still expect commit to succeed first,
     # so 'ok' will be False but status will mention push failure.
-    log = subprocess.run(["git", "-C", str(repo), "log", "--oneline"],
-                         capture_output=True, text=True, check=True)
+    log = subprocess.run(
+        ["git", "-C", str(repo), "log", "--oneline"], capture_output=True, text=True, check=True
+    )
     assert "alex" in log.stdout

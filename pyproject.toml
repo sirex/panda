@@ -1,0 +1,47 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = ["results", "repo", ".git"]
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "F",    # pyflakes
+  "I",    # isort
+  "UP",   # pyupgrade
+  "B",    # flake8-bugbear
+]
+
+[tool.ruff.lint.per-file-ignores]
+"test_panda.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_redundant_casts = true
+warn_unused_ignores = true
+# Require type annotations on all function definitions and parameters.
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+disallow_any_generics = true
+no_implicit_optional = true
+no_implicit_reexport = true
+strict_equality = true
+check_untyped_defs = true
+
+# urwid is untyped; let it be `Any` so it doesn't fight the strict settings above.
+disallow_subclassing_any = false
+warn_return_any = false
+
+[[tool.mypy.overrides]]
+module = ["urwid", "urwid.*"]
+ignore_missing_imports = true
+
+# The test file imports panda.py via importlib (module name isn't a package);
+# keep it relaxed so fixture-style helpers don't fight the strict policy.
+[[tool.mypy.overrides]]
+module = ["test_panda"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_any_generics = false
