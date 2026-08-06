@@ -32,8 +32,10 @@
 
         apps.default = {
           type = "app";
-          program = "${pythonEnv}/bin/python3";
-          args = [ "${./panda.py}" "tests" ];
+          program = "${pkgs.writeShellScript "panda-run" ''
+            cd "${self.outPath}"
+            ${pythonEnv}/bin/python3 ${./panda.py} tests
+          ''}";
         };
 
         apps.tests = {
