@@ -192,6 +192,7 @@ class Config:
     local_repo: Path = field(default_factory=lambda: DEFAULT_REPO_LOCAL)
     repo_disabled: bool = False
     tests_dir: Path = field(default_factory=lambda: DEFAULT_REPO_LOCAL / TESTS_SUBDIR)
+    theme: str = "dark"
 
     @property
     def effective_player(self) -> str:
@@ -218,6 +219,8 @@ def load_config() -> Config:
         td = data.get("tests_dir")
         if td:
             cfg.tests_dir = Path(os.path.expanduser(td))
+        theme_name = _as_str(data.get("theme"), "dark")
+        cfg.theme = theme_name if theme_name in BUILTIN_THEMES else "dark"
     return cfg
 
 
@@ -229,6 +232,7 @@ def save_config(cfg: Config) -> None:
         "local_repo": str(cfg.local_repo),
         "repo_disabled": cfg.repo_disabled,
         "tests_dir": str(cfg.tests_dir),
+        "theme": cfg.theme,
     }
     write_toml(CONFIG_PATH, data)
 
@@ -583,27 +587,66 @@ def score_markup(score: tuple[int, int, int, int]) -> list[tuple[str | None, str
     ]
 
 
-# Background used for the focused list row.
-FOCUS_BG = "dark blue"
+@dataclass
+class Theme:
+    name: str
+    palette: list[tuple[str, str, str]]
+    focus_bg: str
+    row_focus_map: dict[object, urwid.AttrSpec]
 
 
-# When a row is focused, AttrMap's focus_map replaces the source attribute of
-# each run-length segment.  A single AttrSpec would clobber the per-character
-# colours (green/red/yellow), so we use a dict keyed by every source attr the
-# rows use, mapping each to a focused version that keeps the same foreground
-# but paints FOCUS_BG behind it.  `None` (the "default" attr) maps to a plain
-# white-bold-on-FOCUS_BG style.
-def _focus_spec(fg: str) -> "urwid.AttrSpec":
-    return urwid.AttrSpec(fg, FOCUS_BG)
+def _build_row_focus_map(focus_bg: str) -> dict[object, urwid.AttrSpec]:
+    def _fs(fg: str) -> urwid.AttrSpec:
+        return urwid.AttrSpec(fg, focus_bg)
+
+    return {
+        None: _fs("white,bold"),
+        "muted": _fs("dark gray"),
+        "light green,bold": _fs("light green,bold"),
+        "light red,bold": _fs("light red,bold"),
+        "yellow,bold": _fs("yellow,bold"),
+    }
 
 
-ROW_FOCUS_MAP = {
-    None: _focus_spec("white,bold"),
-    "muted": _focus_spec("dark gray"),
-    "light green,bold": _focus_spec("light green,bold"),
-    "light red,bold": _focus_spec("light red,bold"),
-    "yellow,bold": _focus_spec("yellow,bold"),
-}
+DEFAULT_THEME = "dark"
+
+
+def _make_dark_theme() -> Theme:
+    return Theme(
+        name="dark",
+        focus_bg="dark blue",
+        palette=[
+            ("title", "light cyan,bold", "default"),
+            ("prompt", "yellow,bold", "default"),
+            ("good", "light green,bold", "default"),
+            ("bad", "light red,bold", "default"),
+            ("warn", "yellow,bold", "default"),
+            ("muted", "dark gray", "default"),
+            ("key", "black", "light gray"),
+            ("hi", "white,bold", "dark blue"),
+            ("answer", "white,bold", "default"),
+            ("bar", "dark gray", "default"),
+            ("bar_dim", "dark gray", "default"),
+            ("bar_warn", "yellow", "default"),
+            ("bar_crit", "light red", "default"),
+            ("select", "black", "light green"),
+            ("focus", "black", "dark cyan"),
+            ("error", "light red,bold", "default"),
+        ],
+        row_focus_map=_build_row_focus_map("dark blue"),
+    )
+
+
+BUILTIN_THEMES: dict[str, Theme] = {"dark": _make_dark_theme()}
+
+
+def _resolve_theme(name: str) -> Theme:
+    return BUILTIN_THEMES.get(name, BUILTIN_THEMES[DEFAULT_THEME])
+
+
+FOCUS_BG = BUILTIN_THEMES["dark"].focus_bg
+PALETTE = BUILTIN_THEMES["dark"].palette
+ROW_FOCUS_MAP = BUILTIN_THEMES["dark"].row_focus_map
 
 
 def focus_attr_map(label_markup: object) -> urwid.AttrMap:
@@ -712,25 +755,6 @@ def write_result_log(
 # TUI building blocks (urwid)
 # --------------------------------------------------------------------------- #
 
-PALETTE = [
-    ("title", "light cyan,bold", "default"),
-    ("prompt", "yellow,bold", "default"),
-    ("good", "light green,bold", "default"),
-    ("bad", "light red,bold", "default"),
-    ("warn", "yellow,bold", "default"),
-    ("muted", "dark gray", "default"),
-    ("key", "black", "light gray"),
-    ("hi", "white,bold", "dark blue"),
-    ("answer", "white,bold", "default"),  # no blue background
-    ("bar", "dark gray", "default"),  # light/less visible
-    ("bar_dim", "dark gray", "default"),  # unused bar segment
-    ("bar_warn", "yellow", "default"),
-    ("bar_crit", "light red", "default"),
-    ("select", "black", "light green"),
-    ("focus", "black", "dark cyan"),
-    ("error", "light red,bold", "default"),
-]
-
 
 def centered(widget: object, valign: str = "middle", halign: str = "center") -> urwid.Filler:
     return urwid.Filler(
@@ -758,6 +782,7 @@ def run_loop(
     unhandled: Callable[[object], None] | None = None,
     tick_interval: float | None = None,
     tick_fn: Callable[[], None] | None = None,
+    theme: Theme | None = None,
 ) -> None:
     """Run an urwid MainLoop until `loop.stop()` is called.
 
@@ -765,9 +790,10 @@ def run_loop(
     must read/write state in closures rather than return values.
     `unhandled` is the unhandled_input handler.
     """
+    _theme = theme if theme is not None else _resolve_theme(DEFAULT_THEME)
     loop = urwid.MainLoop(
         top_widget,
-        palette=PALETTE,
+        palette=_theme.palette,
         unhandled_input=unhandled,
         handle_mouse=False,
         pop_ups=False,
@@ -1186,7 +1212,13 @@ class _Session:
     q: Question | None = None
 
 
-def run_quiz(test: Test, ordered: list[Question], cfg: Config) -> tuple[bool, list[QResult]]:
+def run_quiz(
+    test: Test,
+    ordered: list[Question],
+    cfg: Config,
+    *,
+    theme: Theme | None = None,
+) -> tuple[bool, list[QResult]]:
     """Run the quiz loop interactively.
 
     Returns (finished_naturally, results). If user aborts via Esc-yes,
@@ -1435,7 +1467,8 @@ def run_quiz(test: Test, ordered: list[Question], cfg: Config) -> tuple[bool, li
             # Don't auto-advance — wait for answer key. Just flip indicator.
             # (We could optionally flash a warning; the timer text already flips.)
 
-    loop = urwid.MainLoop(top, palette=PALETTE, unhandled_input=on_key, handle_mouse=False)
+    _theme = theme if theme is not None else _resolve_theme(DEFAULT_THEME)
+    loop = urwid.MainLoop(top, palette=_theme.palette, unhandled_input=on_key, handle_mouse=False)
     session.loop = loop
 
     def _alarm_tick() -> None:
@@ -1661,7 +1694,7 @@ def play(cfg: Config) -> None:
         started_at = iso_now()
         started_wall = time.monotonic()
 
-        finished, results = run_quiz(test, ordered, cfg)
+        finished, results = run_quiz(test, ordered, cfg, theme=_resolve_theme(cfg.theme))
 
         duration = time.monotonic() - started_wall
         correct = sum(1 for r in results if r.correct)

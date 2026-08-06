@@ -737,3 +737,39 @@ def test_commit_and_push_results_commits_locally(tmp_path):
         ["git", "-C", str(repo), "log", "--oneline"], capture_output=True, text=True, check=True
     )
     assert "alex" in log.stdout
+
+
+# --------------------------------------------------------------------------- #
+# Theme / config roundtrip
+# --------------------------------------------------------------------------- #
+
+
+def test_config_theme_default(tmp_path, monkeypatch):
+    monkeypatch.setattr(panda, "CONFIG_DIR", tmp_path / "cfg_dir")
+    monkeypatch.setattr(panda, "CONFIG_PATH", tmp_path / "cfg_dir" / "config.toml")
+    cfg = panda.load_config()
+    assert cfg.theme == "dark"
+
+
+def test_config_theme_roundtrip(tmp_path, monkeypatch):
+    monkeypatch.setattr(panda, "CONFIG_DIR", tmp_path / "cfg_dir")
+    monkeypatch.setattr(panda, "CONFIG_PATH", tmp_path / "cfg_dir" / "config.toml")
+    cfg = panda.Config(theme="dark")
+    panda.save_config(cfg)
+    loaded = panda.load_config()
+    assert loaded.theme == "dark"
+
+
+def test_config_theme_load_unknown_falls_back(tmp_path, monkeypatch):
+    monkeypatch.setattr(panda, "CONFIG_DIR", tmp_path / "cfg_dir")
+    monkeypatch.setattr(panda, "CONFIG_PATH", tmp_path / "cfg_dir" / "config.toml")
+    cfg_dir = tmp_path / "cfg_dir"
+    cfg_dir.mkdir(parents=True)
+    (cfg_dir / "config.toml").write_text('theme = "nope"\n', encoding="utf-8")
+    cfg = panda.load_config()
+    assert cfg.theme == "dark"
+
+
+def test_config_theme_resolve_unknown():
+    t = panda._resolve_theme("nope")
+    assert t.name == "dark"
