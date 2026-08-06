@@ -1,5 +1,5 @@
 title = "Daugybos lentelė"
-timeout = 10
+timeout = 5
 
 [[questions]]
 id = "m1x1"
@@ -47,11 +47,6 @@ question = "1 × 9"
 correct = "9"
 
 [[questions]]
-id = "m2x1"
-question = "2 × 1"
-correct = "2"
-
-[[questions]]
 id = "m2x2"
 question = "2 × 2"
 correct = "4"
@@ -92,16 +87,6 @@ question = "2 × 9"
 correct = "18"
 
 [[questions]]
-id = "m3x1"
-question = "3 × 1"
-correct = "3"
-
-[[questions]]
-id = "m3x2"
-question = "3 × 2"
-correct = "6"
-
-[[questions]]
 id = "m3x3"
 question = "3 × 3"
 correct = "9"
@@ -137,21 +122,6 @@ question = "3 × 9"
 correct = "27"
 
 [[questions]]
-id = "m4x1"
-question = "4 × 1"
-correct = "4"
-
-[[questions]]
-id = "m4x2"
-question = "4 × 2"
-correct = "8"
-
-[[questions]]
-id = "m4x3"
-question = "4 × 3"
-correct = "12"
-
-[[questions]]
 id = "m4x4"
 question = "4 × 4"
 correct = "16"
@@ -182,26 +152,6 @@ question = "4 × 9"
 correct = "36"
 
 [[questions]]
-id = "m5x1"
-question = "5 × 1"
-correct = "5"
-
-[[questions]]
-id = "m5x2"
-question = "5 × 2"
-correct = "10"
-
-[[questions]]
-id = "m5x3"
-question = "5 × 3"
-correct = "15"
-
-[[questions]]
-id = "m5x4"
-question = "5 × 4"
-correct = "20"
-
-[[questions]]
 id = "m5x5"
 question = "5 × 5"
 correct = "25"
@@ -227,31 +177,6 @@ question = "5 × 9"
 correct = "45"
 
 [[questions]]
-id = "m6x1"
-question = "6 × 1"
-correct = "6"
-
-[[questions]]
-id = "m6x2"
-question = "6 × 2"
-correct = "12"
-
-[[questions]]
-id = "m6x3"
-question = "6 × 3"
-correct = "18"
-
-[[questions]]
-id = "m6x4"
-question = "6 × 4"
-correct = "24"
-
-[[questions]]
-id = "m6x5"
-question = "6 × 5"
-correct = "30"
-
-[[questions]]
 id = "m6x6"
 question = "6 × 6"
 correct = "36"
@@ -272,41 +197,6 @@ question = "6 × 9"
 correct = "54"
 
 [[questions]]
-id = "m6x10"
-question = "6 × 10"
-correct = "60"
-
-[[questions]]
-id = "m7x1"
-question = "7 × 1"
-correct = "7"
-
-[[questions]]
-id = "m7x2"
-question = "7 × 2"
-correct = "14"
-
-[[questions]]
-id = "m7x3"
-question = "7 × 3"
-correct = "21"
-
-[[questions]]
-id = "m7x4"
-question = "7 × 4"
-correct = "28"
-
-[[questions]]
-id = "m7x5"
-question = "7 × 5"
-correct = "35"
-
-[[questions]]
-id = "m7x6"
-question = "7 × 6"
-correct = "42"
-
-[[questions]]
 id = "m7x7"
 question = "7 × 7"
 correct = "49"
@@ -322,41 +212,6 @@ question = "7 × 9"
 correct = "63"
 
 [[questions]]
-id = "m8x1"
-question = "8 × 1"
-correct = "8"
-
-[[questions]]
-id = "m8x2"
-question = "8 × 2"
-correct = "16"
-
-[[questions]]
-id = "m8x3"
-question = "8 × 3"
-correct = "24"
-
-[[questions]]
-id = "m8x4"
-question = "8 × 4"
-correct = "32"
-
-[[questions]]
-id = "m8x5"
-question = "8 × 5"
-correct = "40"
-
-[[questions]]
-id = "m8x6"
-question = "8 × 6"
-correct = "48"
-
-[[questions]]
-id = "m8x7"
-question = "8 × 7"
-correct = "56"
-
-[[questions]]
 id = "m8x8"
 question = "8 × 8"
 correct = "64"
@@ -367,59 +222,9 @@ question = "8 × 9"
 correct = "72"
 
 [[questions]]
-id = "m8x10"
-question = "8 × 10"
-correct = "80"
-
-[[questions]]
-id = "m9x1"
-question = "9 × 1"
-correct = "9"
-
-[[questions]]
-id = "m9x2"
-question = "9 × 2"
-correct = "18"
-
-[[questions]]
-id = "m9x3"
-question = "9 × 3"
-correct = "27"
-
-[[questions]]
-id = "m9x4"
-question = "9 × 4"
-correct = "36"
-
-[[questions]]
-id = "m9x5"
-question = "9 × 5"
-correct = "45"
-
-[[questions]]
-id = "m9x6"
-question = "9 × 6"
-correct = "54"
-
-[[questions]]
-id = "m9x7"
-question = "9 × 7"
-correct = "63"
-
-[[questions]]
-id = "m9x8"
-question = "9 × 8"
-correct = "72"
-
-[[questions]]
 id = "m9x9"
 question = "9 × 9"
 correct = "81"
-
-[[questions]]
-id = "m9x10"
-question = "9 × 10"
-correct = "90"
 
 [[questions]]
 id = "m10x1"

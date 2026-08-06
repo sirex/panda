@@ -56,7 +56,7 @@ Git and SSH must be installed on your system (Panda shells out to them).
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-./panda.py
+python ./panda.py tests
 ```
 
 `requirements.txt` contains the single runtime dependency:
@@ -140,8 +140,8 @@ panda-repo/
             └── 2026-08-05T13-00-00Z.toml   # one log per session
 ```
 
-A starter repo lives in `repo-template/` — copy it, `git init`, push, and
-point Panda at it with `panda.py init-repo <url>`.
+A starter set of tests lives in `tests/` — copy it, `git init`, push, and
+point Panda at it with `panda.py tests`.
 
 ## Test file format (`tests/<name>.toml`)
 
@@ -187,11 +187,11 @@ unloadable.
 
 ```sh
 cd ~/.local/share/panda/repo          # or wherever your local clone lives
-vim tests/multiply.toml                # add/edit questions, save
-/home/sirex/dev/panda/panda.py verify-tests   # rehash ALL .toml sidecars
+$EDITOR tests/multiply.toml           # add/edit questions, save
+./panda.py tests --verify             # rehash ALL .toml sidecars
 ```
 
-`verify-tests` walks every `tests/*.toml` and overwrites its `.sha256` with
+`--verify` walks every `tests/*.toml` and overwrites its `.sha256` with
 the current content hash. It prints one line per file processed:
 
 ```
@@ -209,12 +209,12 @@ git push
 
 #### After adding a new test
 
-Create the `.toml` (no sidecar yet), then run `verify-tests` — it will create
+Create the `.toml` (no sidecar yet), then run `--verify` — it will create
 the missing `.sha256` for you:
 
 ```sh
 $EDITOR tests/capitals-eu.toml           # author the file (no .sha256 yet)
-/home/sirex/dev/panda/panda.py verify-tests
+./panda.py tests --verify
 git add tests/capitals-eu.toml tests/capitals-eu.toml.sha256
 git commit -m "tests: add European capitals"
 git push
@@ -242,7 +242,7 @@ print('OK' if m.verify_sha256_sidecar(Path(p)) else 'TAMPERED', p)
 If you see `integrity check failed ... sha256 sidecar missing or mismatched`,
 it means the `.toml` no longer matches its `.sha256`. Either the file was
 hand-edited or the sidecar was not refreshed after an edit. Re-run
-`verify-tests`, then commit the pair.
+`--verify`, then commit the pair.
 
 #### Why a sidecar instead of GPG signing?
 
@@ -339,3 +339,39 @@ Or without entering the shell:
 ```sh
 nix run .#tests            # via the flake app
 ```
+
+
+## starter tests
+
+Copy `tests/` irectory into a fresh git repo and push it to make a Panda
+questions/results repository.
+
+```sh
+mkdir -p ~/.local/share/panda/repo
+cp -r tests ~/.local/share/panda/repo/tests
+cd ~/.local/share/panda/repo
+git init -b main
+git add .
+git commit -m "Initial"
+git remote add origin git@github.com:you/panda-repo.git
+git push -u origin main
+```
+
+Then point the game at it:
+
+```sh
+./panda.py ~/.local/share/panda/repo git@github.com:you/panda-repo.git
+```
+
+## Layout
+
+```
+.
+└── tests/
+    ├── multiply.toml
+    └── multiply.toml.sha256
+```
+
+- Add one `.toml` per test in `tests/`.
+- Run `./panda.py --verify` after editing tests to refresh the
+  `.sha256` sidecars, then commit both the `.toml` and its `.sha256`.

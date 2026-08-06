@@ -9,18 +9,17 @@ Stdlib + urwid only. Git is driven via subprocess; SSH key handled by the
 user's agent (no --pure in the nix-shell shebang).
 
 Usage:
-    panda.py                       # play
-    panda.py init-repo <url>       # clone + save repo_url to config
-    panda.py verify-tests          # refresh tests/*.sha256 sidecars
+    panda.py                       # play (uses ~/.local/share/panda/repo/tests)
+    panda.py tests                 # play, reading tests from ./tests
+    panda.py [<url>] --init        # clone <url> into local_repo and save URL
+    panda.py [tests_dir] --verify  # refresh tests/*.sha256 sidecars
 """
 
 import argparse
 import datetime as _dt
 import hashlib
-import json
 import os
 import random
-import shlex
 import subprocess
 import sys
 import time
@@ -186,10 +185,18 @@ class Config:
     repo_url: str = ""
     local_repo: Path = field(default_factory=lambda: DEFAULT_REPO_LOCAL)
     repo_disabled: bool = False
+    tests_dir: Path = field(
+        default_factory=lambda: DEFAULT_REPO_LOCAL / TESTS_SUBDIR)
 
     @property
     def effective_player(self) -> str:
         return self.player or os.environ.get("USER", "anonymous")
+
+
+def tests_dir_for(cfg: Config) -> Path:
+    """Where *.toml test files live for this run — the persisted config value
+    by default, or a one-shot CLI override."""
+    return cfg.tests_dir
 
 
 def load_config() -> Config:
@@ -203,6 +210,9 @@ def load_config() -> Config:
         lr = data.get("local_repo")
         if lr:
             cfg.local_repo = Path(os.path.expanduser(lr))
+        td = data.get("tests_dir")
+        if td:
+            cfg.tests_dir = Path(os.path.expanduser(td))
     return cfg
 
 
@@ -213,6 +223,7 @@ def save_config(cfg: Config) -> None:
         "repo_url": cfg.repo_url,
         "local_repo": str(cfg.local_repo),
         "repo_disabled": cfg.repo_disabled,
+        "tests_dir": str(cfg.tests_dir),
     }
     write_toml(CONFIG_PATH, data)
 
@@ -1384,7 +1395,7 @@ def show_preflight_error(message: str) -> str:
 
 def list_tests(cfg: Config) -> list[tuple[str, str, int, tuple[int, int, int, int], tuple[int, int, int, int]]]:
     """Return list of (slug, title, attempts, last_score, best_score)."""
-    tests_dir = cfg.local_repo / TESTS_SUBDIR
+    tests_dir = tests_dir_for(cfg)
     out = []
     if not tests_dir.exists():
         return out
@@ -1464,7 +1475,7 @@ def play(cfg: Config) -> None:
         if result is None:
             return
         action, slug = result
-        toml_path = cfg.local_repo / TESTS_SUBDIR / f"{slug}.toml"
+        toml_path = tests_dir_for(cfg) / f"{slug}.toml"
         try:
             test = load_test_safely(toml_path)
         except IntegrityError as e:
@@ -1528,21 +1539,23 @@ def play(cfg: Config) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Subcommands
+# Commands
 # --------------------------------------------------------------------------- #
 
-def cmd_init_repo(args) -> int:
+def cmd_init_repo(url: str) -> int:
     cfg = load_config()
-    cfg.repo_url = args.url
+    cfg.repo_url = url
     save_config(cfg)
     ensure_repo(cfg)
-    print(f"Cloned {args.url} into {cfg.local_repo}")
+    print(f"Cloned {url} into {cfg.local_repo}")
     return 0
 
 
-def cmd_verify_tests(args) -> int:
+def cmd_verify_tests(tests_dir_arg: Optional[str]) -> int:
     cfg = load_config()
-    tests_dir = cfg.local_repo / TESTS_SUBDIR
+    if tests_dir_arg:
+        cfg.tests_dir = Path(os.path.expanduser(tests_dir_arg))
+    tests_dir = tests_dir_for(cfg)
     if not tests_dir.exists():
         sys.stderr.write(f"no tests dir at {tests_dir}\n")
         return 1
@@ -1558,8 +1571,10 @@ def cmd_verify_tests(args) -> int:
     return 0
 
 
-def cmd_play(args) -> int:
+def cmd_play(tests_dir_arg: Optional[str]) -> int:
     cfg = load_config()
+    if tests_dir_arg:
+        cfg.tests_dir = Path(os.path.expanduser(tests_dir_arg))
     try:
         play(cfg)
     except QuitApp:
@@ -1570,25 +1585,24 @@ def cmd_play(args) -> int:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    parser = argparse.ArgumentParser(prog="panda",
-                                      description="Panda — terminal quiz game")
-    sub = parser.add_subparsers(dest="cmd")
-
-    p_play = sub.add_parser("play", help="play the game (default)")
-    p_play.set_defaults(func=cmd_play)
-
-    p_init = sub.add_parser("init-repo", help="clone a questions repo + save URL")
-    p_init.add_argument("url")
-    p_init.set_defaults(func=cmd_init_repo)
-
-    p_verify = sub.add_parser("verify-tests",
-                              help="refresh tests/*.sha256 sidecars")
-    p_verify.set_defaults(func=cmd_verify_tests)
-
+    parser = argparse.ArgumentParser(
+        prog="panda", description="Panda — terminal quiz game")
+    parser.add_argument(
+        "--init", metavar="URL",
+        help="clone URL into the configured local_repo and persist it")
+    parser.add_argument(
+        "--verify", action="store_true",
+        help="refresh *.sha256 sidecars for the test files")
+    parser.add_argument(
+        "tests_dir", nargs="?", default=None,
+        help="directory with *.toml test files "
+             "(default: config tests_dir)")
     args = parser.parse_args(argv)
-    if not getattr(args, "func", None):
-        args = parser.parse_args(["play", *([] if argv is None else argv)])
-    return args.func(args)
+    if args.init is not None:
+        return cmd_init_repo(args.init)
+    if args.verify:
+        return cmd_verify_tests(args.tests_dir)
+    return cmd_play(args.tests_dir)
 
 
 if __name__ == "__main__":
